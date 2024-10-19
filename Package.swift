@@ -8,17 +8,17 @@ let package = Package(
     products: [
         // Products define the executables and libraries a package produces, making them visible to other packages.
         .library(
-            name: "es-kit",
-            targets: ["es-kit"]),
+            name: "ESKit",
+            targets: ["ESKit"]),
     ],
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.
         // Targets can depend on other targets in this package and products from dependencies.
         .target(
-            name: "es-kit"),
+            name: "ESKit"),
         .testTarget(
-            name: "es-kitTests",
-            dependencies: ["es-kit"]
+            name: "ESKitTests",
+            dependencies: ["ESKit"]
         ),
     ]
 )
