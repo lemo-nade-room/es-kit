@@ -16,9 +16,29 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
-      - uses: mtgto/swift-format-action@main
+
+      - uses: aws-actions/configure-aws-credentials@v4
         with:
-          configuration_file: .swift-format
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-northeast-1
+
+      - run: aws configure set s3.endpoint_url $S3_API_URL
+        env:
+          S3_API_URL: ${{ secrets.S3_API_URL }}
+
+      - name: Download swift-format binary
+        run: aws s3 cp "s3://${BUCKET_NAME}/${FILE_NAME}" "${GITHUB_WORKSPACE}/swift-format"
+        env:
+          BUCKET_NAME: ${{ secrets.S3_BUCKET_NAME }}
+          FILE_NAME: ${{ secrets.S3_FILE_NAME }}
+
+      - name: Make swift-format executable
+        run: |
+          chmod +x "${GITHUB_WORKSPACE}/swift-format"
+          echo "${GITHUB_WORKSPACE}/swift-format" >> $GITHUB_PATH
+
+      - run: swift-format lint -r .
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 5
