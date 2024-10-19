@@ -17,14 +17,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ap-northeast-1
+      - name: Install aws-cli
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y awscli
 
-      - run: aws configure set s3.endpoint_url $S3_API_URL
+      - name: Configure aws-cli for Cloudflare R2
+        run: |
+          aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
+          aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
+          aws configure set region us-east-1 # Region doesn't matter for R2, but needs to be set
+          aws configure set s3.endpoint_url $S3_API_URL
         env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           S3_API_URL: ${{ secrets.S3_API_URL }}
 
       - name: Download swift-format binary
