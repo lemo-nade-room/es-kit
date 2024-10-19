@@ -1,0 +1,25 @@
+name: Swift CI
+
+on:
+  pull_request:
+    paths:
+      - ./**.swift
+      - swift-ci.yaml
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: swift-actions/setup-swift@v2
+        with:
+          swift-version: "6.0"
+
+      - run: swift --version
+
+      - run: swift format lint -r .
+
