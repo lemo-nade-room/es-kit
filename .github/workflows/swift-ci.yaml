@@ -15,10 +15,40 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+      - uses: actions/checkout@v4
+
+      - uses: mtgto/swift-format-action@main
+        with:
+          configuration_file: .swift-format
+          all_files: true
       - uses: NeedleInAJayStack/setup-swift@feat/swift-6
         with:
           swift-version: "6.0"
-      - run: swift --version
-
-      - run: swift format lint -r .
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          key: swift-build-package-resolved-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Package.resolved') }}
+          path:
+            .build
+      - uses: NeedleInAJayStack/setup-swift@feat/swift-6
+        with:
+          swift-version: "6.0"
+      - run: swift build
+  testing:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          key: swift-build-package-resolved-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Package.resolved') }}
+          path: .build
+      - uses: NeedleInAJayStack/setup-swift@feat/swift-6
+        with:
+          swift-version: "6.0"
+      - run: swift test
 
