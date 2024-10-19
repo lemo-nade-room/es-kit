@@ -4,7 +4,7 @@ on:
   pull_request:
     paths:
       - ./**.swift
-      - swift-ci.yaml
+      - .github/workflows/swift-ci.yaml
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
