@@ -1,0 +1,53 @@
+name: DocC
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'Sources/**.swift'
+      - ".github/workflows/docc.yaml"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          key: swift-build-package-resolved-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Package.resolved') }}
+          path: .build
+
+      - uses: swift-actions/setup-swift@v2
+
+      - name: Build DocC for ESKit
+        run: |
+          swift package --allow-writing-to-directory ./docs/ESKit \
+            generate-documentation --target ESKit \
+            --disable-indexing \
+            --transform-for-static-hosting \
+            --hosting-base-path es-kit/ESKit \
+            --output-path ./docs/ESKit
+      - name: Build DocC for ESKitFluentSQLDatabaseDriver
+        run: |
+          swift package --allow-writing-to-directory ./docs/ESKitFluentSQLDatabaseDriver \
+            generate-documentation --target ESKitFluentSQLDatabaseDriver \
+            --disable-indexing \
+            --transform-for-static-hosting \
+            --hosting-base-path es-kit/ESKitFluentSQLDatabaseDriver \
+            --output-path ./docs/ESKitFluentSQLDatabaseDriver
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+
+      - uses: actions/deploy-pages@v4
