@@ -3,8 +3,8 @@ name: Swift CI
 on:
   pull_request:
     paths:
-      - ./**.swift
-      - .github/workflows/swift-ci.yaml
+      - "**.swift"
+      - ".github/workflows/swift-ci.yaml"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

@@ -2,11 +2,11 @@ import ESKit
 
 public struct EventQueryBuilder<Result: Sendable>: ESKit.EventQueryBuilder {
     
-    private var repository: EventRepository
+    private var repository: Repository
     private var initial: Result
     private var builders = [String: Builder]()
     
-    public init(repository: EventRepository, initial: Result) {
+    public init(repository: Repository, initial: Result) {
         self.repository = repository
         self.initial = initial
     }
