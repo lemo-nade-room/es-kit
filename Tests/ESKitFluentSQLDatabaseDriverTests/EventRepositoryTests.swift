@@ -138,5 +138,16 @@ extension Todos? {
             ]))
             return try aggregate.changeState(index: 0, state: .doing, at: Date(timeIntervalSince1970: 4500))
         }
+        
+        #expect(try await sut.findAggregate(of: Todos.self, id: "user1") == .init(id: "user1", todos: [
+            .init(title: "初めてのTodo", state: .todo),
+            .init(title: "2回目のTodo", state: .done),
+        ]))
+        #expect(try await sut.findAggregate(of: Todos.self, id: "user2") == .init(id: "user2", todos: [
+            .init(title: "初めてのTodo by: user2", state: .doing),
+        ]))
+        
+        // detachedしたタスクが、DBコネクション閉じるまでに発動させるため
+        try await Task.sleep(nanoseconds: 1_000_000)
     }
 }

@@ -4,6 +4,7 @@ import Foundation
 
 /// SQLを使用したイベントのリポジトリ
 public struct Repository: ESKit.Repository {
+    
     public typealias EventQueryBuilder = ESKitFluentSQLDatabaseDriver.EventQueryBuilder<any Sendable>
     
     /// 集約へイベントを適用する関数の型
@@ -46,29 +47,21 @@ public struct Repository: ESKit.Repository {
         for aggregateId: Event.Aggregate.Id,
         _ operation: @Sendable (Event.Aggregate?) async throws -> Event?
     ) async throws -> Event? {
-        let snapshot = try await findSnapshot(of: Event.Aggregate.self, id: aggregateId)
-        let eventDAOList = try await findAllEventDAOList(of: Event.Aggregate.self, aggregateId, over: snapshot?.lastStep ?? 0)
-        let aggregate = try replay(from: snapshot?.toAggregate(Event.Aggregate.self, decoder: decoder), eventDAOList: eventDAOList)
-        if let aggregate {
-            let next = try SnapshotDAO(aggregate, lastStep: eventDAOList.last?.step ?? 0, encoder: encoder)
-            let db = db
-            Task.detached {
-                try await db.transaction { transaction in
-                    try await snapshot?.delete(on: transaction)
-                    try await next.create(on: transaction)
-                }
-            }
-        }
-        guard let event = try await operation(aggregate) else {
+        let result = try await fullReplay(of: Event.Aggregate.self, id: aggregateId)
+        guard let event = try await operation(result.aggregate) else {
             return nil
         }
-        let dao = try EventDAO(event, step: (eventDAOList.last?.step ?? 0) + 1, encoder: encoder)
+        let dao = try EventDAO(event, step: result.lastStep + 1, encoder: encoder)
         try await dao.create(on: db)
         return event
     }
     
     public func query<Result: Sendable>(_ initial: Result) -> ESKitFluentSQLDatabaseDriver.EventQueryBuilder<Result> {
         .init(repository: self, initial: initial)
+    }
+    
+    public func findAggregate<Aggregate: ESKit.Aggregate>(of type: Aggregate.Type, id: Aggregate.Id) async throws -> Aggregate? {
+        try await fullReplay(of: Aggregate.self, id: id).aggregate
     }
     
     /// ``command(for:_:)``実行時に投げるエラー
@@ -104,17 +97,47 @@ public struct Repository: ESKit.Repository {
         var aggregateId: String?
     }
     
-    /// イベントとスナップショットから集約をリプレイして取得する
+    /// イベントとスナップショットをDBから取得し、集約をリプレイして取得する
+    ///
+    /// その際、Snapshotのアップデートも実施する
     /// - Parameters:
-    ///   - aggregate: 元となるスナップショット
-    ///   - eventDAOList: スナップショット以降に記録されたイベントリスト
-    /// - Returns: イベントが適用された集約
-    private func replay<Aggregate: ESKit.Aggregate>(from aggregate: Aggregate?, eventDAOList: [EventDAO]) throws -> Aggregate? {
-        var aggregate = aggregate
+    ///   - of: 集約型
+    ///   - id: 集約ID
+    /// - Returns: リプレイされた集約とイベント、スナップショット
+    private func fullReplay<Aggregate: ESKit.Aggregate>(of: Aggregate.Type, id: Aggregate.Id) async throws -> ReplayResult<Aggregate> {
+        var result = ReplayResult<Aggregate>()
+        
+        result.snapshotDAO = try await findSnapshot(of: Aggregate.self, id: id)
+        result.eventDAOList = try await findAllEventDAOList(of: Aggregate.self, id, over: result.lastStep)
+        let snapshotAggregate = try result.snapshotDAO?.toAggregate(Aggregate.self, decoder: decoder)
+        result.aggregate = try replay(from: snapshotAggregate, eventDAOList: result.eventDAOList)
+         
+        try detacheUpdateSnapshot(result)
+        
+        return result
+    }
+    
+    /// イベントとスナップショットをリプレイして集約を取得する
+    /// - Parameters:
+    ///   - snapshot: スナップショット
+    ///   - eventDAOList: スナップショット以降のイベントリスト
+    /// - Returns: リプレイして作成した集約
+    private func replay<Aggregate: ESKit.Aggregate>(from snapshot: Aggregate?, eventDAOList: [EventDAO]) throws -> Aggregate? {
+        var aggregate = snapshot
         for dao in eventDAOList {
             aggregate = try apply(dao: dao, aggregate: aggregate)
         }
         return aggregate
+    }
+    
+    private struct ReplayResult<Aggregate: ESKit.Aggregate>: Sendable {
+        var snapshotDAO: SnapshotDAO? = nil
+        var eventDAOList: [EventDAO] = []
+        var aggregate: Aggregate? = nil
+        
+        var lastStep: Int {
+            eventDAOList.last?.step ?? snapshotDAO?.lastStep ?? 0
+        }
     }
     
     /// イベントのDAOを集約に適用する
@@ -158,5 +181,19 @@ public struct Repository: ESKit.Repository {
             .filter(\.$step > step)
             .all()
             .sorted()
+    }
+    
+    /// 別タスクで、スナップショットの更新を実施する
+    /// - Parameter result: リプレイを実施した結果
+    private func detacheUpdateSnapshot(_ result: ReplayResult<some Aggregate>) throws {
+        guard let aggregate = result.aggregate else { return }
+        let next = try SnapshotDAO(aggregate, lastStep: result.lastStep, encoder: encoder)
+        let db = db
+        Task.detached {
+            try await db.transaction { transaction in
+                try await result.snapshotDAO?.delete(on: transaction)
+                try await next.create(on: transaction)
+            }
+        }
     }
 }

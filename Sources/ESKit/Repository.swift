@@ -23,4 +23,11 @@ public protocol Repository: Sendable {
     /// - Parameter initial: 初期値
     /// - Returns: クエリビルダ
     func query<Result: Sendable>(_ initial: Result) -> EventQueryBuilder where EventQueryBuilder.Result == Result
+    
+    /// 集約を検索する
+    /// - Parameters:
+    ///   - type: 集約型
+    ///   - id: 集約ID
+    /// - Returns: 検索結果
+    func findAggregate<Aggregate: ESKit.Aggregate>(of type: Aggregate.Type, id: Aggregate.Id) async throws -> Aggregate?
 }
