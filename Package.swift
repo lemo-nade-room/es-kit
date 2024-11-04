@@ -5,11 +5,17 @@ import PackageDescription
 
 let package = Package(
     name: "es-kit",
+    platforms: [.macOS(.v15)],
     products: [
         // Products define the executables and libraries a package produces, making them visible to other packages.
         .library(
             name: "ESKit",
             targets: ["ESKit"]),
+        .library(name: "ESKitFluentSQLDatabaseDriver", targets: ["ESKitFluentSQLDatabaseDriver"]),
+    ],
+    dependencies: [
+        .package(url: "https://github.com/vapor/fluent.git", from: "4.0.0"),
+        .package(url: "https://github.com/vapor/fluent-sqlite-driver.git", from: "4.0.0"),
     ],
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.
@@ -19,6 +25,18 @@ let package = Package(
         .testTarget(
             name: "ESKitTests",
             dependencies: ["ESKit"]
+        ),
+        
+        .target(name: "ESKitFluentSQLDatabaseDriver", dependencies: [
+            .target(name: "ESKit"),
+            .product(name: "Fluent", package: "fluent"),
+        ]),
+        .testTarget(
+            name: "ESKitFluentSQLDatabaseDriverTests",
+            dependencies: [
+                "ESKitFluentSQLDatabaseDriver",
+                .product(name: "FluentSQLiteDriver", package: "fluent-sqlite-driver"),
+            ]
         ),
     ]
 )

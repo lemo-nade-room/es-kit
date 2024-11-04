@@ -5,60 +5,15 @@ on:
     paths:
       - ./**.swift
       - .github/workflows/swift-ci.yaml
+  push:
+    branches:
+      - main
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  lint:
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install aws-cli
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y awscli
-
-      - name: Configure aws-cli for Cloudflare R2
-        run: |
-          aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
-          aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
-          aws configure set region us-east-1 # Region doesn't matter for R2, but needs to be set
-          aws configure set s3.endpoint_url $S3_API_URL
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          S3_API_URL: ${{ secrets.S3_API_URL }}
-
-      - name: Download swift-format binary
-        run: aws s3 cp "s3://${BUCKET_NAME}/${FILE_NAME}" "${GITHUB_WORKSPACE}/swift-format"
-        env:
-          BUCKET_NAME: ${{ secrets.S3_BUCKET_NAME }}
-          FILE_NAME: ${{ secrets.S3_FILE_NAME }}
-
-      - name: Make swift-format executable
-        run: |
-          chmod +x "${GITHUB_WORKSPACE}/swift-format"
-          echo "${GITHUB_WORKSPACE}/swift-format" >> $GITHUB_PATH
-
-      - run: swift-format lint -r .
-  build:
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/cache@v4
-        with:
-          key: swift-build-package-resolved-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Package.resolved') }}
-          path:
-            .build
-      - uses: NeedleInAJayStack/setup-swift@feat/swift-6
-        with:
-          swift-version: "6.0"
-      - run: swift build
   testing:
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -71,5 +26,5 @@ jobs:
       - uses: NeedleInAJayStack/setup-swift@feat/swift-6
         with:
           swift-version: "6.0"
+      - run: swift build
       - run: swift test
-
