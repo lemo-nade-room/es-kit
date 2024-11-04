@@ -3,7 +3,7 @@ import Fluent
 import Foundation
 
 /// SQLを使用したイベントのリポジトリ
-public struct EventRepository: ESKit.EventRepository {
+public struct Repository: ESKit.Repository {
     public typealias EventQueryBuilder = ESKitFluentSQLDatabaseDriver.EventQueryBuilder<any Sendable>
     
     /// 集約へイベントを適用する関数の型
