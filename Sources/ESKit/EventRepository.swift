@@ -1,7 +1,7 @@
 import Foundation
 
 /// イベントのリポジトリ
-public protocol Repository: Sendable {
+public protocol EventRepository: Sendable {
     /// イベントからのクエリビルダ
     associatedtype EventQueryBuilder: ESKit.EventQueryBuilder
     

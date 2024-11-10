@@ -89,7 +89,7 @@ extension Todos? {
         // Arrange
         let (db, cleanUp) = try await setUpTestingDatabase()
         defer { Task { try await cleanUp.run() } }
-        var sut = Repository(on: db, encoder: .init(), decoder: .init())
+        var sut = EventRepository(on: db, encoder: .init(), decoder: .init())
         sut.subscribe(TodoCreated.self)
         sut.subscribe(TodoStateChanged.self)
 
