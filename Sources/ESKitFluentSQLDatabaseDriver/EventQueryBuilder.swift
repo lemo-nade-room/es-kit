@@ -2,12 +2,12 @@ import ESKit
 
 public struct EventQueryBuilder<Result: Sendable>: ESKit.EventQueryBuilder {
     
-    private var repository: Repository
+    private var eventRepository: EventRepository
     private var initial: Result
     private var builders = [String: Builder]()
     
-    public init(repository: Repository, initial: Result) {
-        self.repository = repository
+    public init(repository: EventRepository, initial: Result) {
+        self.eventRepository = repository
         self.initial = initial
     }
     
@@ -21,7 +21,7 @@ public struct EventQueryBuilder<Result: Sendable>: ESKit.EventQueryBuilder {
     }
     
     public func build() async throws -> Result {
-        let eventDAOList = try await repository.findEventDAOList(Set(builders.map { (key, value) in
+        let eventDAOList = try await eventRepository.findEventDAOList(Set(builders.map { (key, value) in
                 .init(type: key, aggregateId: value.aggregateId)
         }))
         var result = self.initial
